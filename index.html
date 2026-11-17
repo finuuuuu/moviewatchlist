@@ -1349,7 +1349,7 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/>
                 </svg>
-                Drag cards or use arrows to prioritize your queue
+                Drag cards or use arrows to prioritize your queue — new titles are added at the end
             </span>
             <span id="filtered-count-label"></span>
         </div>
@@ -1478,6 +1478,14 @@
             trash: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>`,
             note: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8Z"/><path d="M15 3v4a2 2 0 0 0 2 2h4"/></svg>`
         };
+
+        // ---------- ORDERING NOTE ----------
+        // Entries are kept in "oldest added first" order:
+        //   * new items are APPENDED (push) to the end of the array
+        //   * the very first title you ever added stays at index 0
+        //   * drag & drop / arrow buttons can still move items anywhere,
+        //     and that manual order is persisted as-is.
+        // -----------------------------------
 
         function loadState() {
             try {
@@ -1710,7 +1718,9 @@
                 notes: ''
             };
 
-            watchlist.unshift(newEntry);
+            // Append instead of prepend, so the first title you ever added
+            // remains at the top and later additions stack underneath it.
+            watchlist.push(newEntry);
             saveState();
             cinemetaDropdown.classList.add('hidden');
             cinemetaInput.value = '';
@@ -1784,6 +1794,7 @@
             emptyState.classList.add('hidden');
             reorderHint.classList.remove('hidden');
 
+            // Rendered in stored array order => "first added, first shown".
             container.innerHTML = filteredItems.map(item => {
                 const isWatched = item.status === 'watched';
                 const realIndex = watchlist.findIndex(w => w.id === item.id);
@@ -2052,6 +2063,7 @@
             if (!title) return;
 
             if (editId) {
+                // Editing never changes queue position.
                 const item = watchlist.find(w => w.id === editId);
                 if (item) {
                     item.title = title;
@@ -2064,7 +2076,8 @@
                 }
                 showToast(`Updated "${title}"`, 'success');
             } else {
-                watchlist.unshift({
+                // Append new custom entries too, keeping "first added first".
+                watchlist.push({
                     id: `custom_${Date.now()}`,
                     title,
                     type,
@@ -2123,6 +2136,7 @@
                         if (!item || !item.title) return;
                         const exists = watchlist.some(w => w.id === item.id || (w.title.toLowerCase() === item.title.toLowerCase() && w.type === item.type));
                         if (!exists) {
+                            // Push preserves the order found in the backup file.
                             watchlist.push({
                                 id: item.id || `imp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
                                 title: String(item.title),
@@ -2194,4 +2208,3 @@
     </script>
 </body>
 </html>
-```
